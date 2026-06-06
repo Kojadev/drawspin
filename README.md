@@ -9,7 +9,7 @@ I built it mostly to play with WebSockets and a Three.js wheel, but the
 server-authoritative part is the bit I actually care about: the client never
 gets to pick the outcome.
 
-![DrawSpin UI](docs/preview.svg)
+![DrawSpin betting phase](docs/shot2.png)
 
 ## Stack
 
