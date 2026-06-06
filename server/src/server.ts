@@ -11,14 +11,14 @@ interface Segment {
 }
 
 const SEGMENTS: Segment[] = [
-  { index: 0, label: "2x", color: "#ef4444", multiplier: 2 },
-  { index: 1, label: "3x", color: "#f59e0b", multiplier: 3 },
-  { index: 2, label: "5x", color: "#10b981", multiplier: 5 },
-  { index: 3, label: "2x", color: "#3b82f6", multiplier: 2 },
-  { index: 4, label: "10x", color: "#a855f7", multiplier: 10 },
-  { index: 5, label: "2x", color: "#ec4899", multiplier: 2 },
-  { index: 6, label: "3x", color: "#22d3ee", multiplier: 3 },
-  { index: 7, label: "5x", color: "#f97316", multiplier: 5 },
+  { index: 0, label: "1x", color: "#c026d3", multiplier: 1 },
+  { index: 1, label: "3x", color: "#9333ea", multiplier: 3 },
+  { index: 2, label: "4x", color: "#7c3aed", multiplier: 4 },
+  { index: 3, label: "5x", color: "#2563eb", multiplier: 5 },
+  { index: 4, label: "6x", color: "#0891b2", multiplier: 6 },
+  { index: 5, label: "7x", color: "#0d9488", multiplier: 7 },
+  { index: 6, label: "2x", color: "#16a34a", multiplier: 2 },
+  { index: 7, label: "10x", color: "#22c55e", multiplier: 10 },
 ];
 
 const BETTING_MS = 9000;
@@ -33,13 +33,25 @@ interface Bet {
 
 interface Client {
   id: string;
+  pubId: number;
+  name: string;
   socket: WebSocket;
   balance: number;
   bets: Bet[];
 }
 
+interface PublicBet {
+  betId: number;
+  id: number;
+  name: string;
+  segment: number;
+  amount: number;
+}
+
 const clients = new Map<WebSocket, Client>();
 const history: number[] = [];
+let roundBets: PublicBet[] = [];
+let betSeq = 0;
 
 let phase: Phase = "betting";
 let roundId = 1;
@@ -69,6 +81,7 @@ function statePayload() {
     winningIndex,
     spinSeed,
     players: clients.size,
+    bets: roundBets,
   };
 }
 
@@ -82,6 +95,7 @@ function enterBetting(): void {
   winningIndex = null;
   spinSeed = null;
   phaseEndsAt = Date.now() + BETTING_MS;
+  roundBets = [];
   for (const c of clients.values()) c.bets = [];
   broadcastState();
 }
@@ -135,6 +149,8 @@ const wss = new WebSocketServer({ port: PORT });
 wss.on("connection", (socket: WebSocket) => {
   const client: Client = {
     id: randomUUID(),
+    pubId: randomInt(1000, 10000),
+    name: "Player",
     socket,
     balance: START_BALANCE,
     bets: [],
@@ -144,6 +160,7 @@ wss.on("connection", (socket: WebSocket) => {
   send(socket, {
     type: "welcome",
     playerId: client.id,
+    pubId: client.pubId,
     balance: client.balance,
     segments: SEGMENTS,
   });
@@ -170,7 +187,11 @@ wss.on("connection", (socket: WebSocket) => {
 
       client.balance -= amount;
       client.bets.push({ segment, amount });
+      const publicBet: PublicBet = { betId: ++betSeq, id: client.pubId, name: client.name, segment, amount };
+      roundBets.push(publicBet);
+      if (roundBets.length > 60) roundBets.shift();
       send(socket, { type: "balance", balance: client.balance, lastWin: null });
+      broadcast({ type: "bets", bets: roundBets });
     }
   });
 
