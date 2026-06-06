@@ -12,6 +12,14 @@ export interface Bet {
   amount: number;
 }
 
+export interface PublicBet {
+  betId: number;
+  id: number;
+  name: string;
+  segment: number;
+  amount: number;
+}
+
 export interface GameState {
   connected: boolean;
   phase: Phase;
@@ -25,5 +33,7 @@ export interface GameState {
   balance: number;
   history: number[];
   myBets: Bet[];
+  allBets: PublicBet[];
+  myId: number | null;
   lastResult: { payout: number } | null;
 }

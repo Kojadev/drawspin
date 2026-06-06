@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { GameState, Phase, Segment } from "./types";
+import type { GameState, Phase, PublicBet, Segment } from "./types";
 
 const WS_URL = (import.meta.env.VITE_WS_URL as string) || "ws://localhost:8080";
 
@@ -16,6 +16,8 @@ const initialState: GameState = {
   balance: 0,
   history: [],
   myBets: [],
+  allBets: [],
+  myId: null,
   lastResult: null,
 };
 
@@ -45,7 +47,7 @@ export function useGame() {
         switch (msg.type) {
           case "welcome":
             segmentsLocked.current = true;
-            setState((s) => ({ ...s, balance: msg.balance, segments: msg.segments as Segment[] }));
+            setState((s) => ({ ...s, balance: msg.balance, myId: msg.pubId ?? null, segments: msg.segments as Segment[] }));
             break;
 
           case "state":
@@ -62,9 +64,14 @@ export function useGame() {
                 spinSeed: msg.spinSeed,
                 players: msg.players,
                 myBets: newRound ? [] : s.myBets,
+                allBets: (msg.bets as PublicBet[]) ?? s.allBets,
                 lastResult: newRound ? null : s.lastResult,
               };
             });
+            break;
+
+          case "bets":
+            setState((s) => ({ ...s, allBets: msg.bets as PublicBet[] }));
             break;
 
           case "balance":
